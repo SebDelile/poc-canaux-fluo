@@ -1,7 +1,7 @@
 import OpenSeaDragon from "openseadragon";
 import React, { useEffect, useState } from "react";
 
-const OpenSeaDragonViewer = ({ objectGamma }) => {
+const OSDGammaOnTheFly = ({ objectGamma }) => {
 	const [viewer, setViewer] = useState(null);
 
 	const InitOpenseadragon = () => {
@@ -79,4 +79,4 @@ const OpenSeaDragonViewer = ({ objectGamma }) => {
 		></div>
 	);
 };
-export { OpenSeaDragonViewer };
+export { OSDGammaOnTheFly };
