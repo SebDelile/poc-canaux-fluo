@@ -1,8 +1,10 @@
 import "./App.css";
 import { useEffect, useState, Fragment } from "react";
 import { OSDProcessDataToBuildImage } from "./OSDProcessDataToBuildImage";
+import FluotileBuilder from "./FluoTileBuilder";
 
-const FLUO_CHANNELS = ["CY3", "CY5", "DAPI", "FITC", "TexasRed"];
+export const FLUO_CHANNELS = ["CY3", "CY5", "DAPI", "FITC", "TexasRed"];
+export const channelCount = FLUO_CHANNELS.length;
 const initialGamma = 1;
 
 function App() {
@@ -137,6 +139,7 @@ function App() {
 					<img src="assets/fluo/real-image/vertical-added.jpg" height={512} />
 				</div>
 			</div>
+			{/* <FluotileBuilder /> */}
 		</div>
 	);
 }
