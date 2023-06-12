@@ -1,59 +1,20 @@
 import "./App.css";
 import { useEffect, useState, Fragment } from "react";
-import { OSDGammaOnTheFly } from "./OSDGammaOnTheFly";
 import { OSDProcessDataToBuildImage } from "./OSDProcessDataToBuildImage";
 
-const MODE = 0;
+const FLUO_CHANNELS = ["CY3", "CY5", "DAPI", "FITC", "TexasRed"];
+const initialGamma = 1;
 
 function App() {
-	// mode gamma on the fly
-	const [gamma, setGamma] = useState({ r: 10, g: 10, b: 10 });
-	const [displayedGamma, setDisplayedGamma] = useState({ r: 1, g: 1, b: 1 });
-	const [objectGamma, setObjectGamma] = useState({ r: 1, g: 1, b: 1 });
-	useEffect(() => {
-		// tricky to have one state with an object with reliable reference
-		// And antoher with a primitive to trigger re-render
-		setObjectGamma((prev) => {
-			Object.entries(gamma).forEach(([color, value]) => {
-				prev[color] = Math.max(value / 10, 0.01);
-			});
-			return prev;
-		});
-		setDisplayedGamma(
-			Object.fromEntries(
-				Object.entries(gamma).map(([color, value]) => [color, (value / 10).toFixed(1)])
-			)
-		);
-	}, [gamma]);
-
-	// mode process data to build image
-	const [gammaFluo, setGammaFluo] = useState({
-		gris: 5,
-		rouge: 5,
-		cyan: 5,
-		vert: 5,
-		magenta: 5,
-		bleu: 5,
-		jaune: 5
-	});
-	const [displayedGammaFluo, setDisplayedGammaFluo] = useState({
-		gris: 0.5,
-		rouge: 0.5,
-		cyan: 0.5,
-		vert: 0.5,
-		magenta: 0.5,
-		bleu: 0.5,
-		jaune: 0.5
-	});
-	const [objectGammaFluo, setObjectGammaFluo] = useState({
-		gris: 0.5,
-		rouge: 0.5,
-		cyan: 0.5,
-		vert: 0.5,
-		magenta: 0.5,
-		bleu: 0.5,
-		jaune: 0.5
-	});
+	const [gammaFluo, setGammaFluo] = useState(
+		Object.fromEntries(FLUO_CHANNELS.map((chan) => [chan, 10 * initialGamma]))
+	);
+	const [displayedGammaFluo, setDisplayedGammaFluo] = useState(
+		Object.fromEntries(FLUO_CHANNELS.map((chan) => [chan, initialGamma]))
+	);
+	const [objectGammaFluo, setObjectGammaFluo] = useState(
+		Object.fromEntries(FLUO_CHANNELS.map((chan) => [chan, initialGamma]))
+	);
 	useEffect(() => {
 		// tricky to have one state with an object with reliable reference
 		// And antoher with a primitive to trigger re-render
@@ -72,109 +33,110 @@ function App() {
 
 	return (
 		<div className="App">
-			{MODE ? (
-				<>
-					<OSDGammaOnTheFly objectGamma={objectGamma} />
-					<div
-						style={{
-							display: "grid",
-							gridTemplateColumns: "150px 150px",
-							margin: "0 auto",
-							width: "300px",
-							gap: "16px"
-						}}
-					>
-						{["red", "green", "blue"].map((color) => (
-							<Fragment key={color}>
-								<input
-									type="range"
-									id={`${color[0]}gamma`}
-									name={`${color[0]}gamma`}
-									min={0}
-									max={40}
-									step={1}
-									value={gamma[color[0]]}
-									onChange={(e) =>
-										setGamma((prev) => ({
-											...prev,
-											[color[0]]: parseInt(e.target.value)
-										}))
-									}
-								/>
-								<label htmlFor={`${color[0]}gamma`}>{`${color} gamma : ${
-									displayedGamma[color[0]]
-								}`}</label>
-							</Fragment>
-						))}
-					</div>
-					<button type="button" onClick={() => setGamma({ r: 10, g: 10, b: 10 })}>
-						Reset
-					</button>
-				</>
-			) : (
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					gap: 16
+				}}
+			>
+				<OSDProcessDataToBuildImage objectGamma={objectGammaFluo} />
 				<div
 					style={{
-						display: "flex",
-						flexDirection: "column",
-						alignItems: "center",
-						gap: 16
+						display: "grid",
+						gridTemplateColumns: "200px 200px",
+						margin: "0 auto",
+						width: "400px",
+						gap: "4px"
 					}}
 				>
-					<OSDProcessDataToBuildImage objectGamma={objectGammaFluo} />
-					<div
-						style={{
-							display: "grid",
-							gridTemplateColumns: "200px 200px",
-							margin: "0 auto",
-							width: "400px",
-							gap: "4px"
-						}}
-					>
-						{["gris", "rouge", "cyan", "vert", "magenta", "bleu", "jaune"].map(
-							(color) => (
-								<Fragment key={color}>
-									<input
-										type="range"
-										id={`${color[0]}gamma`}
-										name={`${color[0]}gamma`}
-										min={0}
-										max={40}
-										step={1}
-										value={gammaFluo[color]}
-										onChange={(e) =>
-											setGammaFluo((prev) => ({
-												...prev,
-												[color]: parseInt(e.target.value)
-											}))
-										}
-									/>
-									<label
-										htmlFor={`${color[0]}gamma`}
-									>{`${color} gamma : ${displayedGammaFluo[color]}`}</label>
-								</Fragment>
-							)
-						)}
-					</div>
+					{["CY3", "CY5", "DAPI", "FITC", "TexasRed"].map((color) => (
+						<Fragment key={color}>
+							<input
+								type="range"
+								id={`${color[0]}gamma`}
+								name={`${color[0]}gamma`}
+								min={0}
+								max={40}
+								step={1}
+								value={gammaFluo[color]}
+								onChange={(e) =>
+									setGammaFluo((prev) => ({
+										...prev,
+										[color]: parseInt(e.target.value)
+									}))
+								}
+							/>
+							<label
+								htmlFor={`${color[0]}gamma`}
+							>{`${color} gamma : ${displayedGammaFluo[color]}`}</label>
+						</Fragment>
+					))}
+				</div>
+				<div style={{ display: "flex", gap: 16 }}>
 					<button
 						type="button"
 						style={{ width: 200 }}
 						onClick={() =>
-							setGammaFluo({
-								gris: 5,
-								rouge: 5,
-								magenta: 5,
-								cyan: 5,
-								vert: 5,
-								jaune: 5,
-								bleu: 5
-							})
+							setGammaFluo(
+								Object.fromEntries(FLUO_CHANNELS.map((chan) => [chan, 0.1]))
+							)
 						}
 					>
-						Reset
+						Turn all off
 					</button>
-					<img src="assets/fluo/colorized.jpg" width={1200} />
+					<button
+						type="button"
+						style={{ width: 200 }}
+						onClick={() =>
+							setGammaFluo(
+								Object.fromEntries(
+									FLUO_CHANNELS.map((chan) => [chan, 10 * initialGamma])
+								)
+							)
+						}
+					>
+						Reset all to 1
+					</button>
+					<button
+						type="button"
+						style={{ width: 200 }}
+						onClick={() =>
+							setGammaFluo((prev) =>
+								Object.fromEntries(
+									Object.entries(prev).map(([chan, value]) => [
+										chan,
+										Math.max(value - 5, 0.1)
+									])
+								)
+							)
+						}
+					>
+						substract 0.5 for all
+					</button>
+					<button
+						type="button"
+						style={{ width: 200 }}
+						onClick={() =>
+							setGammaFluo((prev) =>
+								Object.fromEntries(
+									Object.entries(prev).map(([chan, value]) => [
+										chan,
+										Math.min(value + 5, 40)
+									])
+								)
+							)
+						}
+					>
+						add 0.5 for all
+					</button>
 				</div>
-			)}
+				<div style={{ display: "flex", gap: 16 }}>
+					<img src="assets/fluo/real-image/16896_24064.jpg" height={512} />
+					<img src="assets/fluo/real-image/vertical-added.jpg" height={512} />
+				</div>
+			</div>
 		</div>
 	);
 }

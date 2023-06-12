@@ -1,24 +1,12 @@
 import OpenSeaDragon from "openseadragon";
 import React, { useEffect, useState } from "react";
 
-// const FLUO_RGB = {
-// 	gris: [153, 153, 153],
-// 	rouge: [255, 55, 55],
-// 	cyan: [104, 206, 206],
-// 	vert: [55, 255, 55],
-// 	magenta: [206, 104, 206],
-// 	bleu: [55, 55, 255],
-// 	jaune: [206, 206, 104]
-// };
-
 const FLUO_RGB = [
-	[153, 153, 153],
-	[255, 55, 55],
-	[104, 206, 206],
-	[55, 255, 55],
-	[206, 104, 206],
-	[55, 55, 255],
-	[206, 206, 104]
+	[255, 255, 0],
+	[255, 0, 0],
+	[0, 0, 255],
+	[0, 255, 0],
+	[255, 128, 0]
 ];
 
 const OSDProcessDataToBuildImage = ({ objectGamma }) => {
@@ -41,11 +29,10 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 		});
 		osdViewer.addHandler("tile-drawing", (event) => {
 			if (
-				(!event.tile.currentGamma ||
-					Object.entries(event.tile.currentGamma).some(
-						([color, value]) => objectGamma[color] !== value
-					)) &&
-				event.tile.cacheKey === "assets/testpatternFluo_files/10/2_2.jpg"
+				!event.tile.currentGamma ||
+				Object.entries(event.tile.currentGamma).some(
+					([color, value]) => objectGamma[color] !== value
+				)
 			) {
 				const ctx = event.rendered;
 				if (!event.tile.originalImage) {
@@ -55,10 +42,9 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 						ctx.canvas.width,
 						ctx.canvas.height
 					);
-					ctx.canvas.width = 256;
-					ctx.canvas.height = 256;
+					ctx.canvas.width = 512;
+					ctx.canvas.height = 512;
 				}
-
 				const fluoData = Uint8ClampedArray.from(event.tile.originalImage.data);
 				const displayedImageData = ctx.getImageData(
 					0,
@@ -69,7 +55,7 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 				const data = displayedImageData.data;
 				const frameLength = data.length;
 
-				const precomputedGammas = Object.entries(objectGamma).map(([color, gamma]) => {
+				const precomputedGammas = Object.values(objectGamma).map((gamma) => {
 					const precomputedGamma = [];
 					for (let i = 0; i < 256; i++) {
 						precomputedGamma[i] = parseInt(Math.pow(i / 255, 1 / gamma) * 255);
@@ -79,12 +65,8 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 				// console.log(fluoData);
 				// console.log(precomputedGammas[0]);
 				for (var i = 0; i < frameLength; i += 4) {
-					// data[i] = precomputedGammas[0][fluoData[i + frameLength * 0]];
-					// data[i + 1] = precomputedGammas[0][fluoData[i + 1 + frameLength * 0]];
-					// data[i + 2] = precomputedGammas[0][fluoData[i + 2 + frameLength * 0]];
-
 					data[i] = Math.min(
-						[0, 1, 2, 3, 4, 5, 6].reduce(
+						[0, 1, 2, 3, 4].reduce(
 							(a, b) =>
 								a +
 								(FLUO_RGB[b][0] / 255) *
@@ -94,7 +76,7 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 						255
 					);
 					data[i + 1] = Math.min(
-						[0, 1, 2, 3, 4, 5, 6].reduce(
+						[0, 1, 2, 3, 4].reduce(
 							(a, b) =>
 								a +
 								(FLUO_RGB[b][1] / 255) *
@@ -104,7 +86,7 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 						255
 					);
 					data[i + 2] = Math.min(
-						[0, 1, 2, 3, 4, 5, 6].reduce(
+						[0, 1, 2, 3, 4].reduce(
 							(a, b) =>
 								a +
 								(FLUO_RGB[b][2] / 255) *
@@ -115,7 +97,6 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 					);
 					data[i + 3] = 255;
 				}
-				// console.log(data);
 				ctx.putImageData(displayedImageData, 0, 0);
 				event.tile.currentGamma = { ...objectGamma };
 			}
@@ -137,13 +118,11 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 		}
 	}, [
 		viewer,
-		objectGamma.gris,
-		objectGamma.rouge,
-		objectGamma.cyan,
-		objectGamma.vert,
-		objectGamma.magenta,
-		objectGamma.bleu,
-		objectGamma.jaune
+		objectGamma.CY3,
+		objectGamma.CY5,
+		objectGamma.DAPI,
+		objectGamma.FITC,
+		objectGamma.TexasRed
 	]);
 
 	return (
