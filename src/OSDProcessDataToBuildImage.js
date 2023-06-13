@@ -100,6 +100,7 @@ const OSDProcessDataToBuildImage = ({ params, updateHandler }) => {
 		return () => {
 			viewer && viewer.destroy();
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	useEffect(() => {
