@@ -1,15 +1,15 @@
 import OpenSeaDragon from "openseadragon";
 import React, { useEffect, useState } from "react";
+import {
+	FLUO_CHANNELS,
+	PARAMS_NAME,
+	CHANNEL_COUNT,
+	FLUO_RGB,
+	ORIGINAL_IMG_PIXEL_COUNT,
+	IMG_BYTE_COUNT
+} from "./constants";
 
-const FLUO_RGB = [
-	[255, 255, 0],
-	[255, 0, 0],
-	[0, 0, 255],
-	[0, 255, 0],
-	[255, 128, 0]
-];
-
-const OSDProcessDataToBuildImage = ({ objectGamma }) => {
+const OSDProcessDataToBuildImage = ({ params, updateHandler }) => {
 	const [viewer, setViewer] = useState(null);
 
 	const InitOpenseadragon = () => {
@@ -29,23 +29,35 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 		});
 		osdViewer.addHandler("tile-drawing", (event) => {
 			if (
-				!event.tile.currentGamma ||
-				Object.entries(event.tile.currentGamma).some(
-					([color, value]) => objectGamma[color] !== value
+				!event.tile.currentParams ||
+				Object.entries(event.tile.currentParams).some(([chan, chanParams]) =>
+					PARAMS_NAME.some((param) => chanParams[param] !== params.current[chan][param])
 				)
 			) {
 				const ctx = event.rendered;
-				if (!event.tile.originalImage) {
-					event.tile.originalImage = ctx.getImageData(
+				if (!event.tile.cachedData) {
+					const originalImageData = ctx.getImageData(
 						0,
 						0,
 						ctx.canvas.width,
 						ctx.canvas.height
-					);
+					).data;
+
+					const data = new Uint8ClampedArray(ORIGINAL_IMG_PIXEL_COUNT);
+
+					for (let i = 0; i < ORIGINAL_IMG_PIXEL_COUNT; i += CHANNEL_COUNT) {
+						for (let j = 0; j < CHANNEL_COUNT; j++) {
+							// each pixel RGBA of original image is R=G=B and A=255, 3 of 4 int are useless
+							// store only the R int of each pixel of each img
+							data[i + j] =
+								originalImageData[(i / CHANNEL_COUNT) * 4 + j * IMG_BYTE_COUNT];
+						}
+					}
+					event.tile.cachedData = data;
 					ctx.canvas.width = 512;
 					ctx.canvas.height = 512;
 				}
-				const fluoData = Uint8ClampedArray.from(event.tile.originalImage.data);
+				const fluoData = event.tile.cachedData;
 				const displayedImageData = ctx.getImageData(
 					0,
 					0,
@@ -55,50 +67,29 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 				const data = displayedImageData.data;
 				const frameLength = data.length;
 
-				const precomputedGammas = Object.values(objectGamma).map((gamma) => {
-					const precomputedGamma = [];
-					for (let i = 0; i < 256; i++) {
-						precomputedGamma[i] = parseInt(Math.pow(i / 255, 1 / gamma) * 255);
+				//console.time(event.tile.cacheKey);
+
+				//for each pixel
+				for (let i = 0; i < frameLength; i += 4) {
+					// for each of the RGB channels
+					for (let j = 0; j < 3; j++) {
+						let c = 0;
+						// for each of the fluo channels
+						for (let k = 0; k < FLUO_CHANNELS.length; k++) {
+							c +=
+								(FLUO_RGB[k][j] / 255) *
+								params.current[FLUO_CHANNELS[k]].lut[
+									fluoData[(i / 4) * CHANNEL_COUNT + k]
+								];
+						}
+						data[i + j] = Math.min(c, 255);
 					}
-					return precomputedGamma;
-				});
-				// console.log(fluoData);
-				// console.log(precomputedGammas[0]);
-				for (var i = 0; i < frameLength; i += 4) {
-					data[i] = Math.min(
-						[0, 1, 2, 3, 4].reduce(
-							(a, b) =>
-								a +
-								(FLUO_RGB[b][0] / 255) *
-									precomputedGammas[b][fluoData[i + frameLength * b]],
-							0
-						),
-						255
-					);
-					data[i + 1] = Math.min(
-						[0, 1, 2, 3, 4].reduce(
-							(a, b) =>
-								a +
-								(FLUO_RGB[b][1] / 255) *
-									precomputedGammas[b][fluoData[i + 1 + frameLength * b]],
-							0
-						),
-						255
-					);
-					data[i + 2] = Math.min(
-						[0, 1, 2, 3, 4].reduce(
-							(a, b) =>
-								a +
-								(FLUO_RGB[b][2] / 255) *
-									precomputedGammas[b][fluoData[i + 2 + frameLength * b]],
-							0
-						),
-						255
-					);
+					//opacity
 					data[i + 3] = 255;
 				}
+				// console.timeEnd(event.tile.cacheKey);
 				ctx.putImageData(displayedImageData, 0, 0);
-				event.tile.currentGamma = { ...objectGamma };
+				event.tile.currentParams = { ...params.current };
 			}
 		});
 		setViewer(osdViewer);
@@ -116,14 +107,7 @@ const OSDProcessDataToBuildImage = ({ objectGamma }) => {
 			const tiledImage = viewer.world.getItemAt(0);
 			if (tiledImage) tiledImage.draw();
 		}
-	}, [
-		viewer,
-		objectGamma.CY3,
-		objectGamma.CY5,
-		objectGamma.DAPI,
-		objectGamma.FITC,
-		objectGamma.TexasRed
-	]);
+	}, [viewer, updateHandler]);
 
 	return (
 		<div

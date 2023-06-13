@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { FLUO_CHANNELS, channelCount } from "./App";
+import { FLUO_CHANNELS, CHANNEL_COUNT } from "./constants";
 
 const FluotileBuilder = () => {
 	const imgRef = useRef(null);
@@ -9,7 +9,7 @@ const FluotileBuilder = () => {
 			let ctx = canvas.getContext("2d");
 			canvas.width = 512;
 			// each of the rvba channel is assigned to a fluo channel
-			canvas.height = (512 * channelCount) / 4;
+			canvas.height = (512 * CHANNEL_COUNT) / 4;
 			const drawImage = async () =>
 				Promise.all(
 					FLUO_CHANNELS.map((chan) => {
@@ -38,10 +38,10 @@ const FluotileBuilder = () => {
 				//console.log(imgDatas.map((imgdata) => imgdata.data.slice(0, 10)));
 				const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
 				const data = imageData.data;
-				const totalBits = channelCount * 512 * 512;
-				for (let i = 0; i < totalBits; i += channelCount) {
-					for (let j = 0; j < channelCount; j++) {
-						data[i + j] = imgDatas[j].data[(i / channelCount) * 4];
+				const totalBits = CHANNEL_COUNT * 512 * 512;
+				for (let i = 0; i < totalBits; i += CHANNEL_COUNT) {
+					for (let j = 0; j < CHANNEL_COUNT; j++) {
+						data[i + j] = imgDatas[j].data[(i / CHANNEL_COUNT) * 4];
 					}
 				}
 				ctx.putImageData(imageData, 0, 0);

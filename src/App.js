@@ -1,40 +1,38 @@
-import "./App.css";
-import { useEffect, useState, Fragment } from "react";
+import { useState, useRef, Fragment } from "react";
 import { OSDProcessDataToBuildImage } from "./OSDProcessDataToBuildImage";
-import FluotileBuilder from "./FluoTileBuilder";
+import { updateLut, INITIAL_LUT } from "./updateLut";
+import { FLUO_CHANNELS, FLUO_RGB, PARAMS_NAME } from "./constants";
 
-export const FLUO_CHANNELS = ["CY3", "CY5", "DAPI", "FITC", "TexasRed"];
-export const channelCount = FLUO_CHANNELS.length;
-const initialGamma = 1;
+const initialParams = { brightness: 0, contrast: 0, gamma: 1, lut: INITIAL_LUT };
 
 function App() {
-	const [gammaFluo, setGammaFluo] = useState(
-		Object.fromEntries(FLUO_CHANNELS.map((chan) => [chan, 10 * initialGamma]))
+	const paramsAsRef = useRef(
+		Object.fromEntries(FLUO_CHANNELS.map((channel) => [channel, { ...initialParams }]))
 	);
-	const [displayedGammaFluo, setDisplayedGammaFluo] = useState(
-		Object.fromEntries(FLUO_CHANNELS.map((chan) => [chan, initialGamma]))
-	);
-	const [objectGammaFluo, setObjectGammaFluo] = useState(
-		Object.fromEntries(FLUO_CHANNELS.map((chan) => [chan, initialGamma]))
-	);
-	useEffect(() => {
-		// tricky to have one state with an object with reliable reference
-		// And antoher with a primitive to trigger re-render
-		setObjectGammaFluo((prev) => {
-			Object.entries(gammaFluo).forEach(([color, value]) => {
-				prev[color] = Math.max(value / 10, 0.01);
-			});
-			return prev;
-		});
-		setDisplayedGammaFluo(
-			Object.fromEntries(
-				Object.entries(gammaFluo).map(([color, value]) => [color, (value / 10).toFixed(1)])
-			)
-		);
-	}, [gammaFluo]);
+	const [paramsAsState, setParamsAsState] = useState(paramsAsRef.current);
+	const [seeOriginalImage, setSeeOriginalImage] = useState(false);
+
+	const updateParams = (channel, param, newValue) => {
+		const newParams = {
+			...paramsAsRef.current,
+			[channel]: { ...paramsAsRef.current[channel], [param]: newValue }
+		};
+		newParams[channel].lut = updateLut(newParams[channel]);
+		paramsAsRef.current = newParams;
+		setParamsAsState(newParams);
+	};
+
+	const resetParams = (channel) => {
+		const newParams = {
+			...paramsAsRef.current,
+			[channel]: { ...initialParams }
+		};
+		paramsAsRef.current = newParams;
+		setParamsAsState(newParams);
+	};
 
 	return (
-		<div className="App">
+		<div style={{ margin: 16 }}>
 			<div
 				style={{
 					display: "flex",
@@ -43,103 +41,145 @@ function App() {
 					gap: 16
 				}}
 			>
-				<OSDProcessDataToBuildImage objectGamma={objectGammaFluo} />
+				<OSDProcessDataToBuildImage params={paramsAsRef} updateHandler={paramsAsState} />
 				<div
 					style={{
 						display: "grid",
-						gridTemplateColumns: "200px 200px",
+						gridTemplateColumns: "repeat(6,1fr)",
 						margin: "0 auto",
-						width: "400px",
-						gap: "4px"
+						width: "1200px",
+						gap: "32px",
+						textAlign: "center"
 					}}
 				>
-					{["CY3", "CY5", "DAPI", "FITC", "TexasRed"].map((color) => (
-						<Fragment key={color}>
-							<input
-								type="range"
-								id={`${color[0]}gamma`}
-								name={`${color[0]}gamma`}
-								min={0}
-								max={40}
-								step={1}
-								value={gammaFluo[color]}
-								onChange={(e) =>
-									setGammaFluo((prev) => ({
-										...prev,
-										[color]: parseInt(e.target.value)
-									}))
-								}
-							/>
-							<label
-								htmlFor={`${color[0]}gamma`}
-							>{`${color} gamma : ${displayedGammaFluo[color]}`}</label>
-						</Fragment>
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "1fr",
+							gap: "4px",
+							fontWeight: "bold"
+						}}
+					>
+						<div>Channel</div>
+						{PARAMS_NAME.map((paramName) => (
+							<div key={paramName}>{paramName}</div>
+						))}
+						<button
+							type="button"
+							onClick={() => FLUO_CHANNELS.forEach((channel) => resetParams(channel))}
+						>
+							Reset all
+						</button>
+					</div>
+					{FLUO_CHANNELS.map((channel, index) => (
+						<div
+							key={channel}
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(2,1fr)",
+								gap: "4px"
+							}}
+						>
+							<div
+								style={{
+									gridColumnEnd: "span 2",
+									fontWeight: "bold",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center"
+								}}
+							>
+								{channel}
+								<svg
+									width="1em"
+									height="1em"
+									viewBox="0 0 10 10"
+									style={{ marginLeft: "4px" }}
+								>
+									<rect
+										x="0"
+										y="0"
+										width="10"
+										height="10"
+										style={{
+											fill: `rgb(${FLUO_RGB[index]})`,
+											stroke: "#666",
+											strokeWidth: 1
+										}}
+									/>
+								</svg>
+							</div>
+
+							{PARAMS_NAME.map((param) => (
+								<Fragment key={param}>
+									<input
+										type="range"
+										id={`${channel[0]}${param}`}
+										name={`${channel[0]}${param}`}
+										min={param === "gamma" ? 0.1 : -100}
+										max={param === "gamma" ? 5 : 100}
+										step={param === "gamma" ? 0.1 : 4}
+										value={paramsAsState[channel][param]}
+										onChange={(e) => {
+											const newValue =
+												param === "gamma"
+													? parseFloat(e.target.value)
+													: parseInt(e.target.value);
+											updateParams(channel, param, newValue);
+										}}
+									/>
+									<label htmlFor={`${channel[0]}${param}`}>
+										{paramsAsState[channel][param]}
+									</label>
+								</Fragment>
+							))}
+							<button
+								type="button"
+								onClick={() => resetParams(channel)}
+								style={{ gridColumnEnd: "span 2" }}
+							>
+								Reset
+							</button>
+						</div>
 					))}
 				</div>
-				<div style={{ display: "flex", gap: 16 }}>
-					<button
-						type="button"
-						style={{ width: 200 }}
-						onClick={() =>
-							setGammaFluo(
-								Object.fromEntries(FLUO_CHANNELS.map((chan) => [chan, 0.1]))
-							)
-						}
-					>
-						Turn all off
-					</button>
-					<button
-						type="button"
-						style={{ width: 200 }}
-						onClick={() =>
-							setGammaFluo(
-								Object.fromEntries(
-									FLUO_CHANNELS.map((chan) => [chan, 10 * initialGamma])
-								)
-							)
-						}
-					>
-						Reset all to 1
-					</button>
-					<button
-						type="button"
-						style={{ width: 200 }}
-						onClick={() =>
-							setGammaFluo((prev) =>
-								Object.fromEntries(
-									Object.entries(prev).map(([chan, value]) => [
-										chan,
-										Math.max(value - 5, 0.1)
-									])
-								)
-							)
-						}
-					>
-						substract 0.5 for all
-					</button>
-					<button
-						type="button"
-						style={{ width: 200 }}
-						onClick={() =>
-							setGammaFluo((prev) =>
-								Object.fromEntries(
-									Object.entries(prev).map(([chan, value]) => [
-										chan,
-										Math.min(value + 5, 40)
-									])
-								)
-							)
-						}
-					>
-						add 0.5 for all
-					</button>
+				<hr />
+				<div
+					style={{ cursor: "pointer" }}
+					onClick={() => {
+						setSeeOriginalImage((prev) => !prev);
+					}}
+				>
+					{`See original image and monochromes per fluo channel ${
+						seeOriginalImage ? "▲" : "▼"
+					}`}
 				</div>
-				<div style={{ display: "flex", gap: 16 }}>
-					<img src="assets/fluo/real-image/16896_24064.jpg" height={512} />
-					<img src="assets/fluo/real-image/vertical-added.jpg" height={512} />
+				<div
+					style={{
+						display: seeOriginalImage ? "grid" : "none",
+						gridTemplateColumns: "5fr 1fr 1fr",
+						placeItems: "center",
+						gap: "0px 16px",
+						marginTop: 16
+					}}
+				>
+					<img
+						src="assets/fluo/real-image/16896_24064.jpg"
+						height={512}
+						alt="original with color"
+						style={{ gridRowEnd: "span 5" }}
+					/>
+					<img
+						src="assets/fluo/real-image/vertical-added.jpg"
+						height={512}
+						alt="monochrome channels"
+						style={{ gridRowEnd: "span 5" }}
+					/>
+					{FLUO_CHANNELS.map((channel) => (
+						<div key={channel}>{channel}</div>
+					))}
 				</div>
 			</div>
-			{/* <FluotileBuilder /> */}
 		</div>
 	);
 }

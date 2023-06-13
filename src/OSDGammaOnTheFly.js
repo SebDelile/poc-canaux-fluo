@@ -1,4 +1,4 @@
-import OpenSeaDragon from "openseadragon";
+import OpenSeaDragon from "./openseadragon";
 import React, { useEffect, useState } from "react";
 
 const OSDGammaOnTheFly = ({ objectGamma }) => {
