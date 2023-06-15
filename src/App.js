@@ -6,29 +6,22 @@ import { FLUO_CHANNELS, FLUO_RGB, PARAMS_NAME } from "./constants";
 const initialParams = { brightness: 0, contrast: 0, gamma: 1, lut: INITIAL_LUT };
 
 function App() {
-	const paramsAsRef = useRef(
-		Object.fromEntries(FLUO_CHANNELS.map((channel) => [channel, { ...initialParams }]))
-	);
+	const paramsAsRef = useRef(FLUO_CHANNELS.map((_) => ({ ...initialParams })));
 	const [paramsAsState, setParamsAsState] = useState(paramsAsRef.current);
 	const [seeOriginalImage, setSeeOriginalImage] = useState(false);
 
-	const updateParams = (channel, param, newValue) => {
-		const newParams = {
-			...paramsAsRef.current,
-			[channel]: { ...paramsAsRef.current[channel], [param]: newValue }
+	const updateParams = (channelIndex, param, newValue) => {
+		paramsAsRef.current[channelIndex] = {
+			...paramsAsRef.current[channelIndex],
+			[param]: newValue
 		};
-		newParams[channel].lut = updateLut(newParams[channel]);
-		paramsAsRef.current = newParams;
-		setParamsAsState(newParams);
+		paramsAsRef.current[channelIndex].lut = updateLut(paramsAsRef.current[channelIndex]);
+		setParamsAsState([...paramsAsRef.current]);
 	};
 
-	const resetParams = (channel) => {
-		const newParams = {
-			...paramsAsRef.current,
-			[channel]: { ...initialParams }
-		};
-		paramsAsRef.current = newParams;
-		setParamsAsState(newParams);
+	const resetParams = (channelIndex) => {
+		paramsAsRef.current[channelIndex] = { ...initialParams };
+		setParamsAsState([...paramsAsRef.current]);
 	};
 
 	return (
@@ -66,12 +59,16 @@ function App() {
 						))}
 						<button
 							type="button"
-							onClick={() => FLUO_CHANNELS.forEach((channel) => resetParams(channel))}
+							onClick={() =>
+								FLUO_CHANNELS.forEach((_, channelIndex) =>
+									resetParams(channelIndex)
+								)
+							}
 						>
 							Reset all
 						</button>
 					</div>
-					{FLUO_CHANNELS.map((channel, index) => (
+					{FLUO_CHANNELS.map((channel, channelIndex) => (
 						<div
 							key={channel}
 							style={{
@@ -102,7 +99,7 @@ function App() {
 										width="10"
 										height="10"
 										style={{
-											fill: `rgb(${FLUO_RGB[index]})`,
+											fill: `rgb(${FLUO_RGB[channelIndex]})`,
 											stroke: "#666",
 											strokeWidth: 1
 										}}
@@ -114,28 +111,28 @@ function App() {
 								<Fragment key={param}>
 									<input
 										type="range"
-										id={`${channel[0]}${param}`}
-										name={`${channel[0]}${param}`}
+										id={`${channel}${param}`}
+										name={`${channel}${param}`}
 										min={param === "gamma" ? 0.1 : -100}
 										max={param === "gamma" ? 5 : 100}
 										step={param === "gamma" ? 0.1 : 4}
-										value={paramsAsState[channel][param]}
+										value={paramsAsState[channelIndex][param]}
 										onChange={(e) => {
 											const newValue =
 												param === "gamma"
 													? parseFloat(e.target.value)
 													: parseInt(e.target.value);
-											updateParams(channel, param, newValue);
+											updateParams(channelIndex, param, newValue);
 										}}
 									/>
-									<label htmlFor={`${channel[0]}${param}`}>
-										{paramsAsState[channel][param]}
+									<label htmlFor={`${channel}${param}`}>
+										{paramsAsState[channelIndex][param]}
 									</label>
 								</Fragment>
 							))}
 							<button
 								type="button"
-								onClick={() => resetParams(channel)}
+								onClick={() => resetParams(channelIndex)}
 								style={{ gridColumnEnd: "span 2" }}
 							>
 								Reset

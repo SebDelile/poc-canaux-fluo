@@ -9,6 +9,8 @@ export const FLUO_RGB = [
 	[255, 128, 0]
 ];
 
+export const FLUO_RGB_RATIO = FLUO_RGB.map((rgb) => rgb.map((byte) => byte / 255));
+
 export const PARAMS_NAME = ["brightness", "contrast", "gamma"];
 
 export const ORIGINAL_IMG_PIXEL_COUNT = CHANNEL_COUNT * 512 * 512;

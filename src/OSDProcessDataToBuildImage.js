@@ -1,12 +1,11 @@
 import OpenSeaDragon from "openseadragon";
 import React, { useEffect, useState } from "react";
 import {
-	FLUO_CHANNELS,
 	PARAMS_NAME,
 	CHANNEL_COUNT,
-	FLUO_RGB,
 	ORIGINAL_IMG_PIXEL_COUNT,
-	IMG_BYTE_COUNT
+	IMG_BYTE_COUNT,
+	FLUO_RGB_RATIO
 } from "./constants";
 
 const OSDProcessDataToBuildImage = ({ params, updateHandler }) => {
@@ -28,10 +27,13 @@ const OSDProcessDataToBuildImage = ({ params, updateHandler }) => {
 			zoomPerScroll: 2
 		});
 		osdViewer.addHandler("tile-drawing", (event) => {
+			const currentParams = [...params.current];
 			if (
 				!event.tile.currentParams ||
-				Object.entries(event.tile.currentParams).some(([chan, chanParams]) =>
-					PARAMS_NAME.some((param) => chanParams[param] !== params.current[chan][param])
+				event.tile.currentParams.some((channelParams, channelIndex) =>
+					PARAMS_NAME.some(
+						(param) => channelParams[param] !== currentParams[channelIndex][param]
+					)
 				)
 			) {
 				const ctx = event.rendered;
@@ -67,29 +69,33 @@ const OSDProcessDataToBuildImage = ({ params, updateHandler }) => {
 				const data = displayedImageData.data;
 				const frameLength = data.length;
 
-				//console.time(event.tile.cacheKey);
+				console.time(event.tile.cacheKey);
 
 				//for each pixel
 				for (let i = 0; i < frameLength; i += 4) {
-					// for each of the RGB channels
-					for (let j = 0; j < 3; j++) {
-						let c = 0;
-						// for each of the fluo channels
-						for (let k = 0; k < FLUO_CHANNELS.length; k++) {
-							c +=
-								(FLUO_RGB[k][j] / 255) *
-								params.current[FLUO_CHANNELS[k]].lut[
-									fluoData[(i / 4) * CHANNEL_COUNT + k]
-								];
+					const pixel = [0, 0, 0];
+					// for each of the fluo channels
+					for (let j = 0; j < CHANNEL_COUNT; j++) {
+						const fluoChannelRGBRatio = FLUO_RGB_RATIO[j];
+						const fluoByte = fluoData[(i / 4) * CHANNEL_COUNT + j];
+						const { lut } = currentParams[j];
+						const correctedFluoByte = lut[fluoByte];
+						// for each of the RGB channels
+						for (let k = 0; k < 3; k++) {
+							const fluoChannelRatio = fluoChannelRGBRatio[k];
+							if (fluoChannelRatio) pixel[k] += fluoChannelRatio * correctedFluoByte;
 						}
-						data[i + j] = Math.min(c, 255);
+					}
+					for (let k = 0; k < 3; k++) {
+						data[i + k] = Math.min(255, pixel[k]);
 					}
 					//opacity
 					data[i + 3] = 255;
 				}
-				// console.timeEnd(event.tile.cacheKey);
+				console.timeEnd(event.tile.cacheKey);
+				//console.log(data);
 				ctx.putImageData(displayedImageData, 0, 0);
-				event.tile.currentParams = { ...params.current };
+				event.tile.currentParams = currentParams;
 			}
 		});
 		setViewer(osdViewer);
