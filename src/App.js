@@ -3,7 +3,7 @@ import { OSDProcessDataToBuildImage } from "./OSDProcessDataToBuildImage";
 import { updateLut, INITIAL_LUT } from "./updateLut";
 import { FLUO_CHANNELS, FLUO_RGB, PARAMS_NAME } from "./constants";
 
-const initialParams = { brightness: 0, contrast: 0, gamma: 1, lut: INITIAL_LUT };
+const initialParams = { brightness: 0, contrast: 0, gamma: 1, isActivated: true, lut: INITIAL_LUT };
 
 function App() {
 	const paramsAsRef = useRef(FLUO_CHANNELS.map((_) => ({ ...initialParams })));
@@ -16,6 +16,14 @@ function App() {
 			[param]: newValue
 		};
 		paramsAsRef.current[channelIndex].lut = updateLut(paramsAsRef.current[channelIndex]);
+		setParamsAsState([...paramsAsRef.current]);
+	};
+
+	const toggleChannel = (channelIndex, isActivated) => {
+		paramsAsRef.current[channelIndex] = {
+			...paramsAsRef.current[channelIndex],
+			isActivated
+		};
 		setParamsAsState([...paramsAsRef.current]);
 	};
 
@@ -86,6 +94,14 @@ function App() {
 									justifyContent: "center"
 								}}
 							>
+								<input
+									type="checkbox"
+									checked={paramsAsState[channelIndex].isActivated}
+									onChange={(e) => {
+										toggleChannel(channelIndex, e.target.checked);
+									}}
+									style={{ marginRight: "0.5rem" }}
+								/>
 								{channel}
 								<svg
 									width="1em"
@@ -111,6 +127,7 @@ function App() {
 								<Fragment key={param}>
 									<input
 										type="range"
+										disabled={!paramsAsState[channelIndex].isActivated}
 										id={`${channel}${param}`}
 										name={`${channel}${param}`}
 										min={param === "gamma" ? 0.1 : -100}
@@ -133,6 +150,7 @@ function App() {
 							<button
 								type="button"
 								onClick={() => resetParams(channelIndex)}
+								disabled={!paramsAsState[channelIndex].isActivated}
 								style={{ gridColumnEnd: "span 2" }}
 							>
 								Reset

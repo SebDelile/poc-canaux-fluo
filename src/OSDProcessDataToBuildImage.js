@@ -31,7 +31,7 @@ const OSDProcessDataToBuildImage = ({ params, updateHandler }) => {
 			if (
 				!event.tile.currentParams ||
 				event.tile.currentParams.some((channelParams, channelIndex) =>
-					PARAMS_NAME.some(
+					[...PARAMS_NAME, "isActivated"].some(
 						(param) => channelParams[param] !== currentParams[channelIndex][param]
 					)
 				)
@@ -76,14 +76,17 @@ const OSDProcessDataToBuildImage = ({ params, updateHandler }) => {
 					const pixel = [0, 0, 0];
 					// for each of the fluo channels
 					for (let j = 0; j < CHANNEL_COUNT; j++) {
-						const fluoChannelRGBRatio = FLUO_RGB_RATIO[j];
-						const fluoByte = fluoData[(i / 4) * CHANNEL_COUNT + j];
-						const { lut } = currentParams[j];
-						const correctedFluoByte = lut[fluoByte];
-						// for each of the RGB channels
-						for (let k = 0; k < 3; k++) {
-							const fluoChannelRatio = fluoChannelRGBRatio[k];
-							if (fluoChannelRatio) pixel[k] += fluoChannelRatio * correctedFluoByte;
+						if (currentParams[j].isActivated) {
+							const fluoChannelRGBRatio = FLUO_RGB_RATIO[j];
+							const fluoByte = fluoData[(i / 4) * CHANNEL_COUNT + j];
+							const { lut } = currentParams[j];
+							const correctedFluoByte = lut[fluoByte];
+							// for each of the RGB channels
+							for (let k = 0; k < 3; k++) {
+								const fluoChannelRatio = fluoChannelRGBRatio[k];
+								if (fluoChannelRatio)
+									pixel[k] += fluoChannelRatio * correctedFluoByte;
+							}
 						}
 					}
 					for (let k = 0; k < 3; k++) {
